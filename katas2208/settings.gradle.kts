@@ -1,3 +1,3 @@
 
-rootProject.name = "amazon-interview-excercies"
+rootProject.name = "kotlin-codekatas"
 
