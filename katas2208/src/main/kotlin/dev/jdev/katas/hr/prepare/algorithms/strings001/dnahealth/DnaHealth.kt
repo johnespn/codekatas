@@ -29,32 +29,26 @@ fun main(args: Array<String>) {
     val health = readLine()!!.trimEnd().split(" ").map{ it.toInt() }.toTypedArray()
     val genesWithHealth = genes.zip(health)
     val s = readLine()!!.trim().toInt()
-    var dNAStrands = mutableListOf<DnaStrand>()
+    var allHealthValues = mutableListOf<Int>()
     for (sItr in 1..s) {
         val firstMultipleInput = readLine()!!.trimEnd().split(" ")
         val first = firstMultipleInput[0].toInt()
         val last = firstMultipleInput[1].toInt()
         val d = firstMultipleInput[2]
-        dNAStrands.add(DnaStrand(first,last,d))
+//        val t = processStrand(first,last,d,genesWithHealth)
+        val genesWithHealth = genesWithHealth.subList(first,last+1)
+        val geneSubsets = d.geneSubsets
+        val totalHealth = geneSubsets
+            .flatMap { gs -> healthValues(genesWithHealth, gs) }
+            .sum()
+        allHealthValues.add(totalHealth)
+
     }
-    /**
-     *
-     */
-    dNAStrands
-        .map{
-            Pair(
-                genesWithHealth.subList(it.start,it.end+1),
-                it.d.geneSubsets
-            )
-        }
-        //.also { println("geneSubsets $it") }
-        .map{
-            it.second
-                .flatMap { gs -> healthValues(it.first, gs) }
-                .sum()
-        }.also {
-            print("${it.min()} ${it.max()}")
-        }
+
+    print("${allHealthValues.min()} ${allHealthValues.max()}")
+}
+
+suspend fun processStrand(first: Int, last: Int, d: String, genesWithHealth: List<Pair<String, Int>>): Int {
 
 }
 
@@ -81,7 +75,6 @@ val String.geneSubsets: List<String>
         return (indices)
             .map { this.substring(it, this.lastIndex+1) }
     }
-data class DnaStrand(val start:Int, val end:Int, val d:String)
 
 /**
 * sample input 0
