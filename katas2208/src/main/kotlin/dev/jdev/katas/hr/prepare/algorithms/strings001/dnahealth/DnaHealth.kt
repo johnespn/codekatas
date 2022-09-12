@@ -1,5 +1,7 @@
 package dev.jdev.katas.hr.prepare.algorithms.strings001.dnahealth
 
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.*
 import kotlin.io.*
 import kotlin.text.*
@@ -23,7 +25,10 @@ import kotlin.text.*
  *  Find and print the respective total healths of the unhealthiest (minimum total health)
  *  and healthiest (maximum total health) strands of DNA as two space-separated values on a single line.
  */
-fun main(args: Array<String>) {
+fun main(args: Array<String>)  {
+
+    val tpool = Executors.newCachedThreadPool()
+
     val n = readLine()!!.trim().toInt()
     val genes = readLine()!!.trimEnd().split(" ").toTypedArray()
     val health = readLine()!!.trimEnd().split(" ").map{ it.toInt() }.toTypedArray()
@@ -34,30 +39,48 @@ fun main(args: Array<String>) {
         val firstMultipleInput = readLine()!!.trimEnd().split(" ")
         val first = firstMultipleInput[0].toInt()
         val last = firstMultipleInput[1].toInt()
+//        println("Frist $first Last $last")
         val d = firstMultipleInput[2]
-//        val t = processStrand(first,last,d,genesWithHealth)
-        val genesWithHealth = genesWithHealth.subList(first,last+1)
-        val geneSubsets = d.geneSubsets
-        val totalHealth = geneSubsets
-            .flatMap { gs -> healthValues(genesWithHealth, gs) }
-            .sum()
-        allHealthValues.add(totalHealth)
-
+        tpool.submit(Runnable {
+            val t = processStrand(first,last,d,genesWithHealth)
+            allHealthValues.add(t)
+            return@Runnable
+        })
     }
+    tpool.shutdown() //wait for everything to finish
+    try {
+        tpool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
+        var max = 0
+        var min = 0
 
-    print("${allHealthValues.min()} ${allHealthValues.max()}")
+        allHealthValues.forEach {
+            if(it != null){
+                max = if(it >= max) it else max
+                min = if(it <= min) it else min
+            }
+        }
+        print("R::: ${min} ${max}")
+
+    } catch (e: InterruptedException) {
+        return
+    }
+    println(allHealthValues)
+
 }
 
-suspend fun processStrand(first: Int, last: Int, d: String, genesWithHealth: List<Pair<String, Int>>): Int {
-
+fun processStrand(first: Int, last: Int, d: String, genesWithHealth: List<Pair<String, Int>>): Int {
+    val genesWithHealth = genesWithHealth.subList(first, last + 1)
+    return d.geneSubsets
+        .flatMap { gs -> healthValues(genesWithHealth, gs) }
+        .sum()
 }
 
 /**
  * Finds the longest sequence it can find in the map
  * caaab => [caaab, caaa, caa, ca, c]
  */
-fun healthValues(genesHealthSubMap: List<Pair<String, Int>>, gs: String):List<Int> {
-    val r = (gs.indices.reversed())
+fun healthValues(genesHealthSubMap: List<Pair<String, Int>>, gs: String): Sequence<Int> {
+    val r = (gs.indices.reversed()).asSequence()
         .map { gs.substring(0,it+1) }
         //.also { println("==== $it") }
         .filter { g:String -> genesHealthSubMap.any{ it.first == g } }
@@ -70,9 +93,9 @@ fun healthValues(genesHealthSubMap: List<Pair<String, Int>>, gs: String):List<In
 /**
  * for gene "caaab" => it returns ["caaab", "aaab", "aab", "ab", "b"]
  */
-val String.geneSubsets: List<String>
+val String.geneSubsets: Sequence<String>
     get() {
-        return (indices)
+        return (indices).asSequence()
             .map { this.substring(it, this.lastIndex+1) }
     }
 
@@ -87,4 +110,13 @@ a b c aa d b    {the genes}
 0 4 xyz
 2 4 bcdybc
 
+6
+a b c aa d b
+1 2 3 4 5 6
+3
+1 5 caaab
+0 4 xyz
+2 4 bcdybc
 */
+
+
